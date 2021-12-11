@@ -70,7 +70,7 @@ namespace DotNetCore.CAP.Processor
 
             foreach (var message in messages)
             {
-                await _subscribeDispatcher.DispatchAsync(message);
+                await _subscribeDispatcher.DispatchAsync(message, context.CancellationToken);
 
                 await context.WaitAsync(_delay);
             }
@@ -84,7 +84,7 @@ namespace DotNetCore.CAP.Processor
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(1, ex, "Get messages of type '{messageType}' failed. Retrying...", typeof(T).Name);
+                _logger.LogWarning(1, ex, "Get messages from storage failed. Retrying...", typeof(T).Name);
 
                 return Enumerable.Empty<T>();
             }

@@ -30,15 +30,31 @@ services.AddCap(config =>
 
 在 `AddCap` 中 `CapOptions` 对象是用来存储配置相关信息，默认情况下它们都具有一些默认值，有些时候你可能需要自定义。
 
-#### DefaultGroup
+#### DefaultGroupName
 
 默认值：cap.queue.{程序集名称}
 
 默认的消费者组的名字，在不同的 Transports 中对应不同的名字，可以通过自定义此值来自定义不同 Transports 中的名字，以便于查看。
 
-> 在 RabbitMQ 中映射到 [Queue Names](https://www.rabbitmq.com/queues.html#names)。  
-> 在 Apache Kafka 中映射到 [Consumer Group Id](http://kafka.apache.org/documentation/#group.id)。  
-> 在 Azure Service Bus 中映射到 Subscription Name。  
+!!! info "Mapping"
+    在 RabbitMQ 中映射到 [Queue Names](https://www.rabbitmq.com/queues.html#names)。  
+    在 Apache Kafka 中映射到 [Consumer Group Id](http://kafka.apache.org/documentation/#group.id)。  
+    在 Azure Service Bus 中映射到 Subscription Name。  
+    在 NATS 中映射到 [Queue Group Name](https://docs.nats.io/nats-concepts/queue).
+    在 Redis Streams 中映射到 [Consumer Group](https://redis.io/topics/streams-intro#creating-a-consumer-group).
+
+
+#### GroupNamePrefix
+
+默认值：Null
+
+为订阅 Group 统一添加前缀。 https://github.com/dotnetcore/CAP/pull/780
+
+#### TopicNamePrefix
+
+默认值： Null
+
+为 Topic 统一添加前缀。 https://github.com/dotnetcore/CAP/pull/780
 
 #### Version
 
@@ -76,6 +92,12 @@ services.AddCap(config =>
 
 消费者线程并行处理消息的线程数，当这个值大于1时，将不能保证消息执行的顺序。
 
+#### CollectorCleaningInterval
+
+默认值：300 秒
+
+收集器删除已经过期消息的时间间隔。
+
 #### FailedRetryCount
 
 默认值：50
@@ -86,12 +108,7 @@ services.AddCap(config =>
 
 默认值：NULL
 
-类型：`Action<MessageType, string, string>`
-
->
-T1 : Message Type  
-T2 : Message Name  
-T3 : Message Content
+类型：`Action<FailedInfo>`
 
 重试阈值的失败回调。当重试达到 FailedRetryCount 设置的值的时候，将调用此 Action 回调，你可以通过指定此回调来接收失败达到最大的通知，以做出人工介入。例如发送邮件或者短信。
 
@@ -100,3 +117,10 @@ T3 : Message Content
 默认值：24*3600 秒（1天后）
 
 成功消息的过期时间（秒）。 当消息发送或者消费成功时候，在时间达到 `SucceedMessageExpiredAfter` 秒时候将会从 Persistent 中删除，你可以通过指定此值来设置过期的时间。
+
+#### UseDispatchingPerGroup
+
+> 默认值: false
+
+默认情况下，CAP会将所有消费者组的消息都先放置到内存同一个Channel中，然后线性处理。
+如果设置为 true，则每个消费者组都会根据 `ConsumerThreadCount` 设置的值创建单独的线程进行处理。

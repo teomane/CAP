@@ -2,9 +2,7 @@
 using DotNetCore.CAP.Messages;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using Microsoft.Extensions.Options;
 using System.Threading.Tasks;
 
 namespace Samples.Redis.SqlServer.Controllers
@@ -14,26 +12,43 @@ namespace Samples.Redis.SqlServer.Controllers
     public class HomeController : ControllerBase
     {
         private readonly ILogger<HomeController> _logger;
-        private readonly ICapPublisher publisher;
+        private readonly ICapPublisher _publisher;
+        private readonly IOptions<CapOptions> _options;
 
-        public HomeController(ILogger<HomeController> logger, ICapPublisher publisher)
+        public HomeController(ILogger<HomeController> logger, ICapPublisher publisher, IOptions<CapOptions> options)
         {
             _logger = logger;
-            this.publisher = publisher;
+            _publisher = publisher;
+            this._options = options;
         }
 
         [HttpGet]
-        public async Task Publish()
+        public async Task Publish([FromQuery] string message = "test-message")
         {
-            await publisher.PublishAsync("test-message", DateTime.UtcNow);
+            await _publisher.PublishAsync(message, new Person() { Age = 11, Name = "James" });
         }
 
         [CapSubscribe("test-message")]
+        [CapSubscribe("test-message-1")]
+        [CapSubscribe("test-message-2")]
+        [CapSubscribe("test-message-3")]
         [NonAction]
-        public void Subscribe(DateTime date, [FromCap] IDictionary<string, string> headers)
+        public void Subscribe(Person p, [FromCap] CapHeader header)
         {
-            var str = string.Join(",", headers.Select(kv => $"({kv.Key}:{kv.Value})"));
-            _logger.LogInformation($"test-message subscribed with value {date}, headers : {str}");
+            _logger.LogInformation($"{header[Headers.MessageName]} subscribed with value --> " + p);
+        }
+
+    }
+
+    public class Person
+    {
+        public string Name { get; set; }
+
+        public int Age { get; set; }
+
+        public override string ToString()
+        {
+            return "Name:" + Name + ", Age:" + Age;
         }
     }
 }
